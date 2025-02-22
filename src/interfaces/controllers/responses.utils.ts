@@ -30,6 +30,10 @@ export function sendAccepted(res: Response): Response {
 }
 
 export function sendServerError(res: Response, err: unknown): Response {
-  EventLogger.err('Server error occurred: ' + err);
+  if (err instanceof Error) {
+    EventLogger.err('Server error occurred: ' + err.name + ': ' + err.message);
+  } else {
+    EventLogger.err('Server error occurred: ' + JSON.stringify(err));
+  }
   return res.status(500).end(); // Avoid sending data to the client
 }
