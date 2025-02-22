@@ -1,5 +1,7 @@
 /* PROJECT LICENSE */
 
+import { InvalidParamError } from '../util/InvalidParamError';
+
 /**
  * System User.
  */
@@ -18,11 +20,11 @@ export class User {
    */
   constructor(user: Partial<User>) {
     if (user.id && 'string' !== typeof user.id) {
-      throw new Error('Invalid user id');
+      throw new InvalidParamError(User.name, 'id');
     }
     this.id = user.id;
     if ('string' !== typeof user.email) {
-      throw new Error('Invalid user email');
+      throw new InvalidParamError(User.name, 'email');
     }
     this.email = user.email;
   }

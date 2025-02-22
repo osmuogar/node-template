@@ -1,6 +1,5 @@
 /* PROJECT LICENSE */
 
-import { CoursesRoutes } from './courses.routes';
 import { Router } from 'express';
 import { createUser } from '../controllers/users.controllers';
 
@@ -10,7 +9,9 @@ const router = Router({ mergeParams: true });
 router.route('/')
   .post(createUser);
 
-// Handle /users/:userId/courses
-router.use('/:userId/courses', CoursesRoutes);
+/*
+// Handle /users/:userId/authenticated
+router.use('/:userId/authenticated', AuthenticatedRoutes);
+*/
 
 export { router as UsersRoutes };

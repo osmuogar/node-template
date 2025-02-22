@@ -1,7 +1,7 @@
 /* PROJECT LICENSE */
 
 import { Server as HTTPServer, createServer as createHTTPServer } from 'http';
-import { APIService } from './interafaces/routes';
+import { APIService } from './interfaces/routes';
 import { Config } from './Config';
 import { EventLogger } from './services/EventLogger';
 import { StorageClient } from './infrastructure/storage/storageclient';

@@ -2,13 +2,12 @@
 
 import { StorageClient } from '../storage/storageclient';
 import { User } from '../../models/User';
-import { UserResponseDTO } from '../../interafaces/controllers/users.controllers';
 /**
  * Name of the completions table.
  */
 export const USERS_TABLE = 'USERS';
 
-export async function userCreate(user: User): Promise<UserResponseDTO> {
+export async function userCreate(user: User): Promise<User> {
   try {
     const storageCli = StorageClient.getInstance();
     const [result, fields] = await storageCli.persistentStorageConnection!.query(

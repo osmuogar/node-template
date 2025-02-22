@@ -986,6 +986,7 @@ const LAYOUT_AND_FORMATTING = {
   'indent': [
     ESLINT_ERROR_LEVEL.DEFAULT,
     2,
+    { SwitchCase: 1 },
   ],
   /*
    * Enforce the consistent use of either double or single quotes in JSX
