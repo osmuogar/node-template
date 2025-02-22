@@ -71,7 +71,9 @@ export class Server {
    * Closes the server.
    */
   async close(): Promise<void> {
+    EventLogger.log('Closing connection to storage service..');
     await this.storageClient.close();
+    EventLogger.log('done\n');
     await new Promise<void>((resolve, reject) => {
       this.httpServer.close(function (err: unknown) {
         if (err) {
@@ -80,5 +82,6 @@ export class Server {
         return resolve();
       });
     });
+    EventLogger.info('HTTP server has been closed');
   }
 }

@@ -23,7 +23,7 @@ export class User {
       throw new InvalidParamError(User.name, 'id');
     }
     this.id = user.id;
-    if ('string' !== typeof user.email) {
+    if (!user.email || 'string' !== typeof user.email) {
       throw new InvalidParamError(User.name, 'email');
     }
     this.email = user.email;
