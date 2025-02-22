@@ -1,0 +1,133 @@
+/* PROJECT LICENSE */
+
+import apiService, { listen } from '../../src/server';
+import request from 'supertest';
+import mysql from 'mysql2/promise';
+import { cleanDatabase } from './util/cleandatabase.utils';
+import User from '../../src/modules/users/models/User';
+import { USERS_TABLE } from '../../src/modules/users/repository/users.repository';
+import { testUtilCreateUser } from './util/createuser.util';
+import Course from '../../src/modules/courses/models/Course';
+import { testUtilCreateCourse } from './util/createcouse.util';
+import Module from '../../src/modules/modules/models/Module';
+import { testUtilCreateModule } from './util/createmodule.util';
+import { testUtilCreateLesson } from './util/createlesson.util';
+import { testUtilCreateCompletion } from './util/createcompletion.util';
+import Lesson from '../../src/modules/lessons/models/Lesson';
+import { Server } from 'http';
+
+let storageConnection: mysql.Connection;
+let server: Server;
+beforeAll(async () => {
+  server = await listen();
+  storageConnection = await mysql.createConnection({
+    host: 'localhost',
+    user: 'test',
+    password: 'test',
+    database: 'LEARNING_MANAGEMENT_SYSTEM',
+  });
+});
+afterAll(async () => {
+  await storageConnection.end();
+  return new Promise<void>((resolve, reject) => {
+    server.close((err) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve();
+    });
+  })
+});
+
+describe('IT | Lessons', () => {
+  let user: User;
+  let course: Course;
+  let module: Module;
+  let lesson: Lesson;
+  beforeEach(async () => {
+    user = await testUtilCreateUser(storageConnection);
+    course = await testUtilCreateCourse(storageConnection, "My course");
+    module = await testUtilCreateModule(storageConnection, "1.1 My firs module",course.id!);
+  });
+  describe('POST /v1/users/:userId/courses/:courseId/modules/:moduleId/lessons', () => {
+    afterEach(async () => {
+      await cleanDatabase(storageConnection);
+    });
+    it('should create a lesson', async () => {
+      const PATH = '/v1/users/' + user.id + '/courses/' + course.id + '/modules/' + module.id + '/lessons';
+      const TITLE = 'My first lesson';
+      const response = await request(apiService).post(PATH).send({
+        title: TITLE,
+      });
+      expect(response.status).toBe(201);
+      expect(typeof response.body.id).toBe('string');
+      expect(response.body).toEqual({
+        id: response.body.id,
+        title: TITLE,
+        module_id: response.body.module_id,
+        is_completed: false,
+      });
+    });
+  });
+  describe('GET /v1/users/:userId/courses/:courseId/modules/:moduleId/lessons/:lessonId', () => {
+    let secondLesson: Lesson;
+    beforeEach(async () => {
+      lesson = await testUtilCreateLesson(storageConnection, "1.1 My first lesson", module.id!);
+      await testUtilCreateCompletion(storageConnection, user.id!, lesson.id!);
+      secondLesson = await testUtilCreateLesson(storageConnection, "1.2 My second lesson", module.id!);
+    });
+    afterEach(async () => {
+      await cleanDatabase(storageConnection);
+    });
+    it('should retrieve an uncompleted lesson', async () => {
+      const PATH = '/v1/users/' + user.id + '/courses/' + course.id + '/modules/' + module.id + '/lessons/' + secondLesson.id;
+      const response = await request(apiService).get(PATH);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: secondLesson.id,
+        title: secondLesson.title,
+        module_id: secondLesson.moduleId,
+        is_completed: false,
+      });
+    });
+    it('should retrieve an completed lesson', async () => {
+      const PATH = '/v1/users/' + user.id + '/courses/' + course.id + '/modules/' + module.id + '/lessons/' + lesson.id;
+      const response = await request(apiService).get(PATH);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: lesson.id,
+        title: lesson.title,
+        module_id: lesson.moduleId,
+        is_completed: true,
+      });
+    });
+  });
+  describe('GET /v1/users/:userId/courses/:courseId/modules/:moduleId/lessons', () => {
+    let secondLesson: Lesson;
+    beforeEach(async () => {
+      lesson = await testUtilCreateLesson(storageConnection, "First lesson", module.id!);
+      secondLesson = await testUtilCreateLesson(storageConnection, "Second lesson", module.id!);
+    });
+    afterEach(async () => {
+      await cleanDatabase(storageConnection);
+    });
+    it('should lis all lessons within the module', async () => {
+      const PATH = '/v1/users/' + user.id + '/courses/' + course.id + '/modules/' + module.id + '/lessons/?offset=0&limit=10';
+      const response = await request(apiService).get(PATH);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([
+        {
+          id: lesson.id,
+          title: lesson.title,
+          module_id: lesson.moduleId,
+          is_completed: false,
+        }, {
+          id: secondLesson.id,
+          title: secondLesson.title,
+          module_id: secondLesson.moduleId,
+          is_completed: false,
+        }]);
+    });
+  });
+});
+

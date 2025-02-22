@@ -1,0 +1,54 @@
+services:
+  node:
+    build:
+      context: .
+      target: development
+    tty: true
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - 3124:3124
+    depends_on:
+      - mysql
+      - rabbitmq
+      - redis
+  mysql:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: LEARNING_MANAGEMENT_SYSTEM
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
+    volumes:
+        # Where data is stored
+      - mysql_storage:/var/lib/mysql
+        # Reads database structure
+      - ./config/mysql/:/docker-entrypoint-initdb.d/
+    ports:
+      - 3306:3306
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+    volumes:
+        - rabbitmq_storage:/var/lib/rabbitmq/
+    ports:
+        - 5672:5672
+        - 15672:15672
+
+  redis:
+    image: redis:7.4.2
+    restart: always
+    volumes:
+        - redis_storage:/data
+    ports:
+        - 6379:6379
+
+volumes:
+  mysql_storage:
+  rabbitmq_storage:
+  redis_storage:

@@ -1,0 +1,83 @@
+/* PROJECT LICENSE */
+
+import apiService, { listen } from '../../src/server';
+import request from 'supertest';
+import mysql from 'mysql2/promise';
+import { cleanDatabase } from './util/cleandatabase.utils';
+import User from '../../src/modules/users/models/User';
+import { testUtilCreateUser } from './util/createuser.util';
+import Course from '../../src/modules/courses/models/Course';
+import { testUtilCreateCourse } from './util/createcouse.util';
+import Module from '../../src/modules/modules/models/Module';
+import { testUtilCreateModule } from './util/createmodule.util';
+import Lesson from '../../src/modules/lessons/models/Lesson';
+import { testUtilCreateLesson } from './util/createlesson.util';
+import { Server } from 'http';
+import { COMPLETIONS_TABLE } from '../../src/modules/completions/repository/completions.repository';
+
+let storageConnection: mysql.Connection;
+let server: Server;
+beforeAll(async () => {
+  server = await listen();
+  storageConnection = await mysql.createConnection({
+    host: 'localhost',
+    user: 'test',
+    password: 'test',
+    database: 'LEARNING_MANAGEMENT_SYSTEM',
+  });
+});
+afterAll(async () => {
+  await storageConnection.end();
+  return new Promise<void>((resolve, reject) => {
+    server.close((err) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve();
+    });
+  })
+});
+
+describe('IT | Completions', () => {
+  let user: User;
+  let course: Course;
+  let module: Module;
+  let lesson: Lesson;
+
+  describe('POST /v1/users/:userId/courses/:courseId/modules/:moduleId/lessons/:lessonId/completions/', () => {
+    beforeEach(async () => {
+      user = await testUtilCreateUser(storageConnection);
+      course = await testUtilCreateCourse(storageConnection, "My course");
+      module = await testUtilCreateModule(storageConnection, "1.1 My first module", course.id!);
+      lesson = await testUtilCreateLesson(storageConnection, "1.1 My first lesson", module.id!);
+    });
+    afterEach(async () => {
+      await cleanDatabase(storageConnection);
+    });
+    it('should create a completion', async () => {
+      const PATH = '/v1/users/' + user.id + '/courses/' + course.id +
+        '/modules/' + module.id + '/lessons/' + lesson.id + '/completions/';
+      const response = await request(apiService).post(PATH).send({});
+      expect(response.status).toBe(202);
+
+      // Give the service some time to process the amqp message
+      await new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          resolve();
+        }, 3000);
+      });
+
+      const [rows] = await storageConnection.query(
+        "SELECT * FROM " + COMPLETIONS_TABLE +
+        " WHERE lessonId = ? AND userId = ?",
+        [lesson.id, user.id]
+      );
+      expect((rows as { id: string }[])[0]).toEqual({
+        id: (rows as { id: string }[])[0].id,
+        lessonId: lesson.id,
+        userId: user.id
+      });
+    });
+  });
+});
+
